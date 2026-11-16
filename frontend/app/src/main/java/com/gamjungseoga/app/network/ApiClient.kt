@@ -10,7 +10,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object ApiClient {
     // RunPod에 띄운 백엔드 서버 주소. 포드를 재시작하면 주소가 바뀔 수 있으니 그때마다 교체.
-    const val BASE_URL = "https://ug6y88pdnvhvlt-8000.proxy.runpod.net/"
+    const val BASE_URL = "https://76jud997pe5js1-8000.proxy.runpod.net/"
 
     // BODY 레벨은 로그인 요청의 비밀번호와 Authorization 헤더의 토큰까지 Logcat에 찍으므로
     // 디버그 빌드에서만 켠다.
