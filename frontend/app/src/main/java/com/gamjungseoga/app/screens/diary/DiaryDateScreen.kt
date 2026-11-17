@@ -25,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,6 +71,29 @@ fun buildDiaryDayInfo(diaries: List<DiaryEntry>): Map<LocalDate, DiaryDayInfo> {
     return result
 }
 
+// 미래 날짜는 서버가 400으로 거부하니(일기를 미리 쓸 수 없음) 누를 수 없다. 이미 일기가 있는
+// 날짜는 미래일 수 없으니 이 판정 대상이 아니다. 기준은 기기 시간이 아니라 서울 시간(today).
+private fun isFutureDay(date: LocalDate, today: LocalDate, dayInfo: DiaryDayInfo?): Boolean =
+    dayInfo == null && date.isAfter(today)
+
+// 날짜를 "골랐을 때"의 동작. 달력 칸 탭과, 달력 화면에서 하단 + 버튼을 한 번 더 누른 경우(오늘 날짜)가
+// 둘 다 이 함수 하나를 탄다 - 하루 1개 제한 규칙이 두 경로에서 어긋나지 않도록 분기를 한 곳에만 둠.
+private fun handleDaySelection(
+    date: LocalDate,
+    today: LocalDate,
+    dayDiaryInfo: Map<LocalDate, DiaryDayInfo>,
+    onDayClick: (LocalDate) -> Unit,
+    onExistingDiaryClick: (diaryId: Long) -> Unit
+) {
+    val dayInfo = dayDiaryInfo[date]
+    when {
+        // 하루 1개 제한: 이미 일기가 있는 날짜는 작성 플로우 대신 그 일기 상세 화면으로 보낸다.
+        dayInfo != null -> onExistingDiaryClick(dayInfo.diaryId)
+        isFutureDay(date, today, dayInfo) -> Unit
+        else -> onDayClick(date)
+    }
+}
+
 @Composable
 fun DiaryDateScreen(
     initialDate: LocalDate,
@@ -78,13 +102,31 @@ fun DiaryDateScreen(
     onExistingDiaryClick: (diaryId: Long) -> Unit,
     // 선택된 달의 날짜별 일기 정보(이미지 URL + id). buildDiaryDayInfo로 채움.
     // 값이 있는 날짜 칸은 이미지로(없으면 빈 칸), 없는 날짜 칸은 빈 칸(CalendarCellGray)으로 표시됨.
-    dayDiaryInfo: Map<LocalDate, DiaryDayInfo> = emptyMap()
+    dayDiaryInfo: Map<LocalDate, DiaryDayInfo> = emptyMap(),
+    // 일기 목록(dayDiaryInfo의 출처)을 다 불러왔는지(성공/실패 무관하게 로딩이 끝났는지).
+    // 아래 "오늘 선택" 요청은 이게 true가 될 때까지 기다렸다가 처리한다 - 로딩 중이라 맵이 비어 있을 때
+    // 처리하면 오늘 일기가 있어도 작성 플로우로 들어가 하루 1개 제한을 우회하게 되므로.
+    dayDiaryInfoReady: Boolean = true,
+    // 하단 + 버튼을 이 화면에서 한 번 더 누르면 true. 오늘 날짜 칸을 탭한 것과 똑같이 처리한 뒤
+    // onSelectTodayHandled로 요청을 소비한다.
+    selectTodayRequested: Boolean = false,
+    onSelectTodayHandled: () -> Unit = {}
 ) {
     var displayedMonth by remember { mutableStateOf(YearMonth.from(initialDate)) }
     // 기기 시간대가 아니라 서버 기준(서울)으로 "오늘"을 판단해야 다른 시간대 기기에서도
     // 기준이 서버 데이터와 어긋나지 않는다.
     val today = remember { LocalDate.now(SEOUL_ZONE) }
     var showMonthPicker by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectTodayRequested, dayDiaryInfoReady) {
+        if (selectTodayRequested && dayDiaryInfoReady) {
+            onSelectTodayHandled()
+            // 버튼을 누른 "지금" 기준 서울 날짜. 화면이 자정을 넘겨 열려 있었어도 어제로 밀리지 않게
+            // remember된 today 대신 다시 계산한다(UTC가 아니라 Asia/Seoul).
+            val now = LocalDate.now(SEOUL_ZONE)
+            handleDaySelection(now, now, dayDiaryInfo, onDateSelected, onExistingDiaryClick)
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -211,10 +253,8 @@ private fun CalendarGrid(
                 week.forEach { date ->
                     if (date != null) {
                         val dayInfo = dayDiaryInfo[date]
-                        // 미래 날짜는 서버가 400으로 거부하니(일기를 미리 쓸 수 없음) 클릭을
-                        // 막고 흐리게 표시한다. 기준은 기기 시간이 아니라 서울 시간(오늘). 이미
-                        // 일기가 있는 날짜는 미래일 수 없으니 이 블록 대상이 아니다.
-                        val isFuture = dayInfo == null && date.isAfter(today)
+                        // 미래 날짜는 클릭을 막고 흐리게 표시한다(판정 기준은 isFutureDay 참고).
+                        val isFuture = isFutureDay(date, today, dayInfo)
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -228,12 +268,13 @@ private fun CalendarGrid(
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(CalendarCellGray)
                                     .let {
-                                        when {
-                                            // 하루 1개 제한: 이미 일기가 있는 날짜는 작성 플로우
-                                            // 대신 그 일기 상세 화면으로 보낸다.
-                                            dayInfo != null -> it.clickable { onExistingDiaryClick(dayInfo.diaryId) }
-                                            isFuture -> it
-                                            else -> it.clickable { onDayClick(date) }
+                                        // 실제 동작(기존 일기 상세 / 작성 플로우)은 handleDaySelection이 결정.
+                                        if (isFuture) {
+                                            it
+                                        } else {
+                                            it.clickable {
+                                                handleDaySelection(date, today, dayDiaryInfo, onDayClick, onExistingDiaryClick)
+                                            }
                                         }
                                     }
                             ) {

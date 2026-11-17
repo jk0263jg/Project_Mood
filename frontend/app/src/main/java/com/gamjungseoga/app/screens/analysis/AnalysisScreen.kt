@@ -414,7 +414,8 @@ fun AnalysisScreen() {
                     item {
                         Spacer(Modifier.height(24.dp))
                         EmotionSummaryCard(
-                            titlePrefix = "오늘 가장 많이 느낀 감정은\n",
+                            // "오늘 가장 많이 느낀" / "감정은 OO이에요" 2줄 고정(감정 이름이 길어 넘칠 때만 자연스럽게 한 줄 더)
+                            titlePrefix = "오늘 가장 많이 느낀\n감정은 ",
                             emotion = stats.topEmotion ?: "-",
                             percent = bars.firstOrNull()?.percent ?: 0,
                             rankColors = bars.map { it.color },
@@ -496,7 +497,7 @@ fun AnalysisScreen() {
                     item {
                         Spacer(Modifier.height(24.dp))
                         EmotionSummaryCard(
-                            titlePrefix = "이번 달 가장 많이 느낀 감정은\n",
+                            titlePrefix = "이번 달 가장 많이 느낀\n감정은 ",
                             emotion = monthlyReport.topEmotion,
                             percent = monthlyReport.topEmotionPercent,
                             rankColors = monthlyReport.topEmotions.map { it.color },
@@ -519,7 +520,8 @@ fun AnalysisScreen() {
                     item {
                         Spacer(Modifier.height(16.dp))
                         TopFeltDayCard(
-                            subtitlePrefix = "가장 긍정적인 감정을 느낀 날은 ",
+                            // 날짜("11월 16일")가 통째로 둘째 줄에 오도록 접두 문구 뒤에서 줄바꿈
+                            subtitlePrefix = "가장 긍정적인 감정을 느낀 날은\n",
                             dateHighlight = monthlyReport.positiveFeltDate,
                             // 그날 대표 감정(top3 1위, 막대와 같은 기준) 색을 흰 배경에서 읽히게 대비 처리
                             dateColor = emotionTextColorFor(monthlyReport.positiveFeltBars.firstOrNull()?.label),
@@ -531,7 +533,7 @@ fun AnalysisScreen() {
                     item {
                         Spacer(Modifier.height(16.dp))
                         TopFeltDayCard(
-                            subtitlePrefix = "가장 부정적인 감정을 느낀 날은 ",
+                            subtitlePrefix = "가장 부정적인 감정을 느낀 날은\n",
                             dateHighlight = monthlyReport.negativeFeltDate,
                             dateColor = emotionTextColorFor(monthlyReport.negativeFeltBars.firstOrNull()?.label),
                             description = monthlyReport.negativeFeltBars.firstOrNull()?.label?.let { "$it 감정이 가장 많았어요" }

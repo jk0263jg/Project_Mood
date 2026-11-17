@@ -138,6 +138,15 @@ fun GamjeongseogaApp() {
     val hideBottomBar = currentRoute == Screen.Login.route ||
         currentRoute.startsWith(Screen.SignupGraph.route)
 
+    // 달력(날짜 선택) 화면에서 + 버튼을 한 번 더 누른 경우의 "오늘 날짜 선택" 요청.
+    // DiaryDateScreen이 처리하면서 false로 되돌린다(소비형이라 화면에 다시 돌아와도 재실행되지 않음).
+    var selectTodayRequested by remember { mutableStateOf(false) }
+    // 목록 로딩 중에 눌러서 요청이 대기 중인 채로 달력을 벗어나면, 다음에 달력에 들어왔을 때
+    // 뒤늦게 실행되지 않도록 버린다.
+    LaunchedEffect(currentRoute) {
+        if (currentRoute != Screen.DiaryDate.route) selectTodayRequested = false
+    }
+
     // refresh token이 없어 401이 뜨면 재로그인이 필요함. SessionManager가 신호를 보내면
     // 백스택을 모두 비우고 로그인 화면으로 이동시킨다.
     LaunchedEffect(navController) {
@@ -189,7 +198,12 @@ fun GamjeongseogaApp() {
                             }
                         },
                         onAddClick = {
-                            navController.navigate(Screen.DiaryGraph.route)
+                            if (currentRoute == Screen.DiaryDate.route) {
+                                // 이미 달력 화면이면 오늘 날짜 칸을 탭한 것과 같은 경로로 처리
+                                selectTodayRequested = true
+                            } else {
+                                navController.navigate(Screen.DiaryGraph.route)
+                            }
                         }
                     )
                 }
@@ -480,7 +494,10 @@ fun GamjeongseogaApp() {
                                     navController.navigate(Screen.DiaryWhat.route)
                                 },
                                 onExistingDiaryClick = goToDiaryDetail,
-                                dayDiaryInfo = dayDiaryInfo
+                                dayDiaryInfo = dayDiaryInfo,
+                                dayDiaryInfoReady = diaryListState !is DiaryListState.Loading,
+                                selectTodayRequested = selectTodayRequested,
+                                onSelectTodayHandled = { selectTodayRequested = false }
                             )
                         }
                     }

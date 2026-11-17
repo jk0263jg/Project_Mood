@@ -89,7 +89,7 @@ fun DiaryCompleteScreen(
         item {
             Spacer(Modifier.height(12.dp))
             EmotionSummaryCard(
-                titlePrefix = "오늘 가장 많이 느낀 감정은\n",
+                titlePrefix = "오늘 가장 많이 느낀\n감정은 ",
                 emotion = topEmotion,
                 percent = topEmotionPercent,
                 rankColors = emotionBars.map { it.color },

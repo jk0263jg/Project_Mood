@@ -156,7 +156,7 @@ fun EmotionIconCircle(@DrawableRes glyphRes: Int, color: Color, size: Dp, modifi
 }
 
 // "오늘(이번 달) 가장 많이 느낀 감정은 OO이에요 / 전체 감정 중 N%를 차지했어요" 카드.
-// titlePrefix는 끝에 줄바꿈까지 포함해서 넘긴다 (예: "오늘 가장 많이 느낀 감정은\n").
+// titlePrefix는 줄바꿈 위치까지 포함해서 넘긴다 (예: "오늘 가장 많이 느낀\n감정은 " -> "감정은 OO이에요"가 한 줄).
 // rankColors는 상위 3개 감정의 색(1위부터). 비어 있으면 대표 감정 색 하나로 큰 원만 칠한다.
 @Composable
 fun EmotionSummaryCard(
