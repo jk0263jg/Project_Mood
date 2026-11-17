@@ -48,7 +48,9 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -59,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import kotlin.math.abs
 import com.gamjungseoga.app.emotion.emotionColorFor
 import com.gamjungseoga.app.network.ApiClient
@@ -438,15 +441,22 @@ private fun MonthlyEmotionCard(item: MonthlyEmotion, index: Int) {
                     .height(58.dp)
             ) {
                 if (item.imageUrl != null) {
-                    // 로딩 중/실패 시 샘플 일러스트(imageRes)가 있으면 그걸 보여주고, 없으면
-                    // 그냥 비워둬서(=카드 배경색만 보임) 깨진 이미지처럼 보이지 않게 함.
+                    // 실패 시 샘플 일러스트(imageRes)가 있으면 그걸 보여주고, 없으면 그냥 비워둬서
+                    // (=카드 배경색만 보임) 깨진 이미지처럼 보이지 않게 함. 로딩 중에는 일러스트가 잠깐
+                    // 보였다 바뀌는 깜빡임을 막으려고 카드 배경과 같은 단색만 깔고 crossfade로 전환.
                     val fallback = item.imageRes?.let { painterResource(it) }
+                    val loadingPlaceholder = remember { ColorPainter(CardBackground) }
+                    val context = LocalContext.current
+                    val request = remember(item.imageUrl) {
+                        ImageRequest.Builder(context).data(item.imageUrl).crossfade(300).build()
+                    }
                     AsyncImage(
-                        model = item.imageUrl,
+                        model = request,
                         contentDescription = item.emotion,
                         contentScale = ContentScale.Crop,
-                        placeholder = fallback,
+                        placeholder = loadingPlaceholder,
                         error = fallback,
+                        fallback = fallback,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else if (item.imageRes != null) {

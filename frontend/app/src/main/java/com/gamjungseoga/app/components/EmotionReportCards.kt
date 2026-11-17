@@ -29,7 +29,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -41,10 +43,12 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.gamjungseoga.app.emotion.drawableForEmotion
 import com.gamjungseoga.app.emotion.emotionColorFor
 import com.gamjungseoga.app.emotion.readableOnWhite
 import com.gamjungseoga.app.ui.theme.BodyGray
+import com.gamjungseoga.app.ui.theme.CardBackground
 import com.gamjungseoga.app.ui.theme.SurfaceColor
 import com.gamjungseoga.app.ui.theme.TitleBrown
 import com.gamjungseoga.app.util.Josa
@@ -73,17 +77,24 @@ fun topEmotionBarsFromScores(scores: Map<String, Double>?): List<EmotionBar> {
     }
 }
 
-// SD3가 생성한 imageUrl이 있으면 그걸 보여주고, 없거나 로딩 실패하면 감정별 일러스트로 대체.
-// 로딩 중에도 같은 일러스트를 placeholder로 보여줘서 자리가 비어 보이지 않게 함.
+// SD3가 생성한 imageUrl이 있으면 그걸 보여주고, 없거나(fallback) 로딩 실패하면(error) 감정별 일러스트로 대체.
+// 로딩 중(placeholder)에는 일러스트 대신 중립 단색만 깔아둔다 - 일러스트를 쓰면 서버 이미지로
+// 바뀌기 전 잠깐 다른 그림이 보였다 바뀌는 깜빡임이 생김. 자리는 aspectRatio로 유지되고 crossfade로 부드럽게 전환.
 @Composable
 fun EmotionHeroImage(topEmotion: String, imageUrl: String?, modifier: Modifier = Modifier) {
     val fallback = painterResource(drawableForEmotion(topEmotion))
+    val loadingPlaceholder = remember { ColorPainter(CardBackground) }
+    val context = LocalContext.current
+    val request = remember(imageUrl) {
+        ImageRequest.Builder(context).data(imageUrl).crossfade(300).build()
+    }
     AsyncImage(
-        model = imageUrl,
+        model = request,
         contentDescription = null,
         contentScale = ContentScale.Crop,
-        placeholder = fallback,
+        placeholder = loadingPlaceholder,
         error = fallback,
+        fallback = fallback,
         modifier = modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(24.dp))

@@ -29,11 +29,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.gamjungseoga.app.components.YearMonthPickerDialog
 import com.gamjungseoga.app.emotion.drawableForEmotion
 import com.gamjungseoga.app.network.ApiClient
@@ -43,6 +46,7 @@ import com.gamjungseoga.app.network.parseServerDateTimeInSeoul
 import com.gamjungseoga.app.screens.diary.DiaryListState
 import com.gamjungseoga.app.screens.diary.DiaryListViewModel
 import com.gamjungseoga.app.ui.theme.BodyGray
+import com.gamjungseoga.app.ui.theme.CardBackground
 import com.gamjungseoga.app.ui.theme.MonthLabelGray
 import com.gamjungseoga.app.ui.theme.TitleBrown
 import java.time.YearMonth
@@ -159,15 +163,23 @@ private fun ArchiveCard(entry: DiaryEntry, onClick: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable(onClick = onClick)
     ) {
-        // entry.imageUrl(SD3 생성 이미지)이 있으면 그걸, 없거나 로딩 실패하면 top_emotion 기준
-        // 가장 가까운 기존 일러스트로 대체. 로딩 중에도 같은 일러스트를 보여줘서 빈 자리 방지.
+        // entry.imageUrl(SD3 생성 이미지)이 있으면 그걸, 없거나(fallback) 로딩 실패하면(error) top_emotion 기준
+        // 가장 가까운 기존 일러스트로 대체. 로딩 중에는 일러스트가 잠깐 보였다 바뀌는 깜빡임을 막으려고
+        // 중립 단색만 깔고(자리는 aspectRatio로 유지), crossfade로 부드럽게 전환.
         val fallback = painterResource(drawableForEmotion(entry.topEmotion))
+        val loadingPlaceholder = remember { ColorPainter(CardBackground) }
+        val context = LocalContext.current
+        val imageUrl = ApiClient.resolveImageUrl(entry.imageUrl)
+        val request = remember(imageUrl) {
+            ImageRequest.Builder(context).data(imageUrl).crossfade(300).build()
+        }
         AsyncImage(
-            model = ApiClient.resolveImageUrl(entry.imageUrl),
+            model = request,
             contentDescription = archiveTitle(entry),
             contentScale = ContentScale.Crop,
-            placeholder = fallback,
+            placeholder = loadingPlaceholder,
             error = fallback,
+            fallback = fallback,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(314f / 429f)

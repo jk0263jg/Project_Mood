@@ -1,12 +1,16 @@
 package com.gamjungseoga.app.screens.diary
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -15,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -30,14 +35,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gamjungseoga.app.ui.theme.CountLabelBrown
@@ -69,7 +81,9 @@ fun DiaryWhoScreen(
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    Column(
+    // 루트: 키보드 높이만큼 아래를 띄우고(imePadding), 그 안을 통째로 세로 스크롤.
+    // (예전엔 칩 영역만 weight(1f)로 스크롤돼서, 키보드가 올라오면 그 영역 높이가 거의 0이 됐음)
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
@@ -80,51 +94,63 @@ fun DiaryWhoScreen(
             }
             .imePadding()
     ) {
-        DiaryTopBar(onBack = onBack)
-        Spacer(Modifier.height(16.dp))
-        DiaryDateLabel(date, modifier = Modifier.padding(horizontal = 16.dp))
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "누구와 함께 했던 일인가요?",
-            style = MaterialTheme.typography.headlineSmall,
-            color = TitleBrown,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "복수 응답이 가능해요",
-            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = OmyuPrettyFontFamily),
-            color = NavInactiveGray,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        Spacer(Modifier.height(20.dp - whoCheckBadgeOverhang))
-        // padding을 verticalScroll 뒤(스크롤 영역 안쪽)에 둬서, 칩 모서리 밖으로 걸치는 체크 배지가
-        // 스크롤 영역 경계(위/오른쪽)에서 잘리지 않게 한다. 위쪽 여백은 위 Spacer에서 그만큼 뺌.
+        val viewportHeight = maxHeight
         Column(
             modifier = Modifier
-                .weight(1f)
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, end = 16.dp, top = whoCheckBadgeOverhang)
+                // 내용이 짧을 때는 화면 높이를 꽉 채워서, 아래 weight Spacer가 버튼을 예전처럼 맨 아래로 밀어줌.
+                .heightIn(min = viewportHeight)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                diaryWhoOptionGroups.forEach { group ->
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        group.forEach { option ->
-                            WhoChip(label = option, selected = option in selected, onClick = { onToggle(option) })
+            DiaryTopBar(onBack = onBack)
+            Spacer(Modifier.height(16.dp))
+            DiaryDateLabel(date, modifier = Modifier.padding(horizontal = 16.dp))
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "누구와 함께 했던 일인가요?",
+                style = MaterialTheme.typography.headlineSmall,
+                color = TitleBrown,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "복수 응답이 가능해요",
+                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = OmyuPrettyFontFamily),
+                color = NavInactiveGray,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            Spacer(Modifier.height(20.dp - whoCheckBadgeOverhang))
+            // 칩 모서리 밖으로 걸치는 체크 배지가 잘리지 않도록 위/오른쪽 여유를 padding으로 둠.
+            // 위쪽 여백은 위 Spacer에서 그만큼 뺌.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = whoCheckBadgeOverhang)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    diaryWhoOptionGroups.forEach { group ->
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            group.forEach { option ->
+                                WhoChip(label = option, selected = option in selected, onClick = { onToggle(option) })
+                            }
                         }
                     }
                 }
+                Spacer(Modifier.height(12.dp))
+                WhoCustomChip(
+                    text = customText,
+                    onTextChange = onCustomTextChange,
+                    viewportHeight = viewportHeight
+                )
             }
-            Spacer(Modifier.height(12.dp))
-            WhoCustomChip(text = customText, onTextChange = onCustomTextChange)
+            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(16.dp))
+            DiaryNextButton(onClick = onNext, enabled = selected.isNotEmpty() || customText.isNotBlank())
+            Spacer(Modifier.height(16.dp))
         }
-        Spacer(Modifier.height(16.dp))
-        DiaryNextButton(onClick = onNext, enabled = selected.isNotEmpty() || customText.isNotBlank())
-        Spacer(Modifier.height(16.dp))
     }
 }
 
@@ -181,11 +207,21 @@ private fun WhoChip(label: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
+// viewportHeight: 키보드가 올라오며 보이는 영역이 줄 때마다 다시 화면 안으로 끌어오기 위한 키.
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun WhoCustomChip(text: String, onTextChange: (String) -> Unit) {
+private fun WhoCustomChip(text: String, onTextChange: (String) -> Unit, viewportHeight: Dp) {
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    var isFocused by remember { mutableStateOf(false) }
+    // 포커스를 얻었을 때, 입력해서 줄이 늘었을 때, 키보드로 보이는 영역이 줄었을 때 "기타" 칸 전체가
+    // 키보드 위로 보이도록 바깥 스크롤을 맞춘다. (칩 한 개 높이라 칸 전체를 기준으로 해도 충분)
+    LaunchedEffect(isFocused, text, viewportHeight) {
+        if (isFocused) bringIntoViewRequester.bringIntoView()
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
+            .bringIntoViewRequester(bringIntoViewRequester)
             .fillMaxWidth()
             .clip(RoundedCornerShape(50))
             .background(Color.White)
@@ -198,7 +234,9 @@ private fun WhoCustomChip(text: String, onTextChange: (String) -> Unit) {
             BasicTextField(
                 value = text,
                 onValueChange = onTextChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { isFocused = it.isFocused },
                 textStyle = WhoChipTextStyle.copy(color = Color.Black),
                 cursorBrush = SolidColor(TitleBrown),
                 decorationBox = { innerTextField ->

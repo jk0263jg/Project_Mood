@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -197,7 +198,12 @@ fun GamjeongseogaApp() {
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
-                modifier = Modifier.padding(innerPadding)
+                // consumeWindowInsets: 하단바(innerPadding)가 이미 차지한 만큼은 소비된 것으로 표시해서,
+                // 화면 안의 imePadding()이 하단바 높이 + 키보드 높이를 이중으로 띄우지 않게 함
+                // (하단바는 키보드 뒤에 깔려 있으므로 키보드 높이에서 그만큼만 빼면 됨).
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .consumeWindowInsets(innerPadding)
             ) {
                 composable(Screen.Home.route) {
                     HomeScreen(
