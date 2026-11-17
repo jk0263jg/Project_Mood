@@ -32,13 +32,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.gamjungseoga.app.components.YearMonthPickerDialog
-import com.gamjungseoga.app.emotion.drawableForEmotion
 import com.gamjungseoga.app.network.ApiClient
 import com.gamjungseoga.app.network.DiaryEntry
 import com.gamjungseoga.app.network.SEOUL_ZONE
@@ -163,11 +161,9 @@ private fun ArchiveCard(entry: DiaryEntry, onClick: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable(onClick = onClick)
     ) {
-        // entry.imageUrl(SD3 생성 이미지)이 있으면 그걸, 없거나(fallback) 로딩 실패하면(error) top_emotion 기준
-        // 가장 가까운 기존 일러스트로 대체. 로딩 중에는 일러스트가 잠깐 보였다 바뀌는 깜빡임을 막으려고
-        // 중립 단색만 깔고(자리는 aspectRatio로 유지), crossfade로 부드럽게 전환.
-        val fallback = painterResource(drawableForEmotion(entry.topEmotion))
-        val loadingPlaceholder = remember { ColorPainter(CardBackground) }
+        // entry.imageUrl(SD3 생성 이미지)이 있으면 그걸 보여주고, 로딩 중·로딩 실패·imageUrl 없음은
+        // 모두 같은 중립 단색으로 비워둔다(대체 일러스트 없음). 자리는 aspectRatio로 유지, crossfade로 전환.
+        val emptyPainter = remember { ColorPainter(CardBackground) }
         val context = LocalContext.current
         val imageUrl = ApiClient.resolveImageUrl(entry.imageUrl)
         val request = remember(imageUrl) {
@@ -177,9 +173,9 @@ private fun ArchiveCard(entry: DiaryEntry, onClick: () -> Unit) {
             model = request,
             contentDescription = archiveTitle(entry),
             contentScale = ContentScale.Crop,
-            placeholder = loadingPlaceholder,
-            error = fallback,
-            fallback = fallback,
+            placeholder = emptyPainter,
+            error = emptyPainter,
+            fallback = emptyPainter,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(314f / 429f)

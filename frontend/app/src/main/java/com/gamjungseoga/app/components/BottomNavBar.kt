@@ -29,7 +29,7 @@ import com.gamjungseoga.app.R
 import com.gamjungseoga.app.navigation.Screen
 import com.gamjungseoga.app.ui.theme.NavActiveTeal
 import com.gamjungseoga.app.ui.theme.NavInactiveGray
-import com.gamjungseoga.app.ui.theme.PretendardFontFamily
+import com.gamjungseoga.app.ui.theme.SCoreDreamFontFamily
 import com.gamjungseoga.app.ui.theme.SolidGreen
 import com.gamjungseoga.app.ui.theme.SurfaceColor
 
@@ -108,11 +108,12 @@ private fun NavItem(iconRes: Int, label: String, selected: Boolean, onClick: () 
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.height(6.dp))
-        // 하단 네비게이션 라벨만 Pretendard 폰트 사용 (나머지 화면은 Omyu Pretty)
+        // 하단 네비게이션 라벨은 S-Core Dream (디자이너 확정). weight는 분석 화면 라벨류와 같은
+        // labelSmall 기본값(Normal = scdream_regular)을 그대로 써서 톤을 맞춤.
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            fontFamily = PretendardFontFamily,
+            fontFamily = SCoreDreamFontFamily,
             color = tint
         )
     }

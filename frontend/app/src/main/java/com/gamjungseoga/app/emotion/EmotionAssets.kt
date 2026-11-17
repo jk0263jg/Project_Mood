@@ -1,11 +1,9 @@
 package com.gamjungseoga.app.emotion
 
 import android.util.Log
-import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
-import com.gamjungseoga.app.R
 import com.gamjungseoga.app.ui.theme.EmotionActive
 import com.gamjungseoga.app.ui.theme.EmotionDrained
 import com.gamjungseoga.app.ui.theme.EmotionExplosive
@@ -18,26 +16,22 @@ import com.gamjungseoga.app.ui.theme.EmotionWary
 import java.util.concurrent.ConcurrentHashMap
 
 // backend/app/emotion_taxonomy.py의 24개 소분류 -> 8개 중분류 매핑과 같은 기준.
-// 그룹마다 대표 색(디자이너 확정, 색채심리학 기준)과, SD3 생성 이미지가 아직 없는 동안
-// 대신 보여줄 기존 8종 아카이브 일러스트를 같이 들고 있다.
-enum class EmotionGroup(val emotions: List<String>, @param:DrawableRes val drawable: Int, val color: Color) {
-    RISING(listOf("행복한", "기쁜", "기대되는", "설레는"), R.drawable.archive_happy, EmotionRising),
-    ACTIVE(listOf("신나는", "열정적인", "즐거운"), R.drawable.archive_joyful, EmotionActive),
-    RELIEF(listOf("상쾌한", "뿌듯한", "후련한"), R.drawable.archive_relieved, EmotionRelief),
-    STABLE(listOf("감사한", "편안한"), R.drawable.archive_comfortable, EmotionStable),
-    WARY(listOf("우울한", "실망한", "후회되는", "슬픈"), R.drawable.archive_depressed, EmotionWary),
-    STAGNANT(listOf("두려운", "불안한", "막막한"), R.drawable.archive_anxious, EmotionStagnant),
-    DRAINED(listOf("피곤한", "외로운", "지루한"), R.drawable.archive_tired, EmotionDrained),
-    EXPLOSIVE(listOf("화나는", "짜증나는"), R.drawable.archive_angry, EmotionExplosive)
+// 그룹마다 대표 색(디자이너 확정, 색채심리학 기준)을 들고 있다.
+enum class EmotionGroup(val emotions: List<String>, val color: Color) {
+    RISING(listOf("행복한", "기쁜", "기대되는", "설레는"), EmotionRising),
+    ACTIVE(listOf("신나는", "열정적인", "즐거운"), EmotionActive),
+    RELIEF(listOf("상쾌한", "뿌듯한", "후련한"), EmotionRelief),
+    STABLE(listOf("감사한", "편안한"), EmotionStable),
+    WARY(listOf("우울한", "실망한", "후회되는", "슬픈"), EmotionWary),
+    STAGNANT(listOf("두려운", "불안한", "막막한"), EmotionStagnant),
+    DRAINED(listOf("피곤한", "외로운", "지루한"), EmotionDrained),
+    EXPLOSIVE(listOf("화나는", "짜증나는"), EmotionExplosive)
 }
 
 private val emotionToGroup: Map<String, EmotionGroup> =
     EmotionGroup.entries.flatMap { group -> group.emotions.map { it to group } }.toMap()
 
 fun emotionGroupOf(emotion: String?): EmotionGroup? = emotionToGroup[emotion]
-
-fun drawableForEmotion(emotion: String?): Int =
-    emotionGroupOf(emotion)?.drawable ?: R.drawable.archive_comfortable
 
 private const val TAG = "EmotionAssets"
 

@@ -132,7 +132,6 @@ fun DiaryDetailScreen(
                     Spacer(Modifier.height(16.dp))
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                         EmotionHeroImage(
-                            topEmotion = topEmotion,
                             imageUrl = ApiClient.resolveImageUrl(diaryEntry.imageUrl),
                             modifier = Modifier.fillMaxWidth()
                         )

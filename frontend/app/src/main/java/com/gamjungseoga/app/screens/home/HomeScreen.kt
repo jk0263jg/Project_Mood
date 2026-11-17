@@ -86,14 +86,13 @@ import com.gamjungseoga.app.ui.theme.PlaceholderTerracotta
 import com.gamjungseoga.app.ui.theme.SolidGreen
 import com.gamjungseoga.app.ui.theme.TitleBrown
 
-// imageUrl: 백엔드(SD3)가 생성해주는 감정 이미지 URL. 있으면 우선 사용, 없으면 imageRes(샘플 일러스트) 표시
+// imageUrl: 백엔드(SD3)가 생성해주는 감정 이미지 URL. 없으면 이미지 칸은 카드 배경 단색으로 비워둠
 private data class MonthlyEmotion(
     val month: String,
     val emotion: String,
     val count: String,
     // 그 달 대표 감정 색. 카드 장식(테이프/조각/점)을 이 색으로 칠함
     val accentColor: Color,
-    val imageRes: Int? = null,
     val imageUrl: String? = null
 )
 
@@ -107,10 +106,6 @@ private data class DiaryPage(
     val imageUrl: String? = null,
     val showDateTag: Boolean = false
 )
-
-// SD3가 달마다 대표 이미지를 만들어주는 API가 아직 없어서, 카드 장식(마스킹테이프 등)과 마찬가지로
-// 이미지는 이 3장을 순서대로 돌려씀. month/emotion/count만 실제 일기 목록에서 계산.
-private val monthlyEmotionImageRes = listOf(R.drawable.emotion_card_1, R.drawable.emotion_card_2, R.drawable.emotion_card_3)
 
 // 이번 달 포함 최근 3개월 각각에 대해, 그 달 일기들의 top_emotion 중 가장 많이 나온 감정을
 // 대표 감정으로 삼음(최빈값). GET /diaries/{userId}가 이미 각 일기의 top_emotion/created_at을
@@ -146,8 +141,6 @@ private fun computeMonthlyEmotions(diaries: List<DiaryEntry>): List<MonthlyEmoti
             count = "${topEmotion?.value ?: 0}회 기록",
             // 기록이 없는 달은 "감정 없음" 기본색
             accentColor = emotionColorFor(topEmotion?.key),
-            // 그 달에 기록이 없으면 샘플 일러스트도 넣지 않는다 (이미지 영역은 MonthlyEmotionCard에서 배경색만 보이게 처리됨)
-            imageRes = if (topEmotion != null) monthlyEmotionImageRes.getOrNull(monthsAgo) else null,
             imageUrl = ApiClient.resolveImageUrl(representativeImageUrl)
         )
     }
@@ -434,18 +427,15 @@ private fun MonthlyEmotionCard(item: MonthlyEmotion, index: Int) {
                 .background(CardBackground)
                 .padding(start = 7.dp, top = 8.dp, end = 7.dp, bottom = 8.dp)
         ) {
-            // 사진 영역: imageUrl(SD3 생성 결과) 있으면 그걸, 없으면 샘플 일러스트, 둘 다 없으면 배경만
+            // 사진 영역: imageUrl(SD3 생성 결과)이 있으면 그걸 보여주고, 없으면 카드 배경색만 보임.
+            // 로딩 중·로딩 실패도 카드 배경과 같은 단색으로 비워둔다(대체 일러스트 없음). 높이는 고정이라 자리 유지.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(58.dp)
             ) {
                 if (item.imageUrl != null) {
-                    // 실패 시 샘플 일러스트(imageRes)가 있으면 그걸 보여주고, 없으면 그냥 비워둬서
-                    // (=카드 배경색만 보임) 깨진 이미지처럼 보이지 않게 함. 로딩 중에는 일러스트가 잠깐
-                    // 보였다 바뀌는 깜빡임을 막으려고 카드 배경과 같은 단색만 깔고 crossfade로 전환.
-                    val fallback = item.imageRes?.let { painterResource(it) }
-                    val loadingPlaceholder = remember { ColorPainter(CardBackground) }
+                    val emptyPainter = remember { ColorPainter(CardBackground) }
                     val context = LocalContext.current
                     val request = remember(item.imageUrl) {
                         ImageRequest.Builder(context).data(item.imageUrl).crossfade(300).build()
@@ -454,16 +444,9 @@ private fun MonthlyEmotionCard(item: MonthlyEmotion, index: Int) {
                         model = request,
                         contentDescription = item.emotion,
                         contentScale = ContentScale.Crop,
-                        placeholder = loadingPlaceholder,
-                        error = fallback,
-                        fallback = fallback,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else if (item.imageRes != null) {
-                    Image(
-                        painter = painterResource(item.imageRes),
-                        contentDescription = item.emotion,
-                        contentScale = ContentScale.Crop,
+                        placeholder = emptyPainter,
+                        error = emptyPainter,
+                        fallback = emptyPainter,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

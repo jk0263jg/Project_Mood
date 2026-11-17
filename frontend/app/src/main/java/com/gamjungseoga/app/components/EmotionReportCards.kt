@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.gamjungseoga.app.emotion.drawableForEmotion
 import com.gamjungseoga.app.emotion.emotionColorFor
 import com.gamjungseoga.app.emotion.readableOnWhite
 import com.gamjungseoga.app.ui.theme.BodyGray
@@ -77,13 +76,12 @@ fun topEmotionBarsFromScores(scores: Map<String, Double>?): List<EmotionBar> {
     }
 }
 
-// SD3가 생성한 imageUrl이 있으면 그걸 보여주고, 없거나(fallback) 로딩 실패하면(error) 감정별 일러스트로 대체.
-// 로딩 중(placeholder)에는 일러스트 대신 중립 단색만 깔아둔다 - 일러스트를 쓰면 서버 이미지로
-// 바뀌기 전 잠깐 다른 그림이 보였다 바뀌는 깜빡임이 생김. 자리는 aspectRatio로 유지되고 crossfade로 부드럽게 전환.
+// SD3가 생성한 imageUrl이 있으면 그걸 보여주고, 로딩 중(placeholder)·로딩 실패(error)·imageUrl 없음(fallback)
+// 모두 같은 중립 단색으로 비워둔다. 실제로 생성되지 않은 그림을 대체 일러스트로 채우지 않기 위함.
+// 자리는 aspectRatio로 유지되고, 이미지가 오면 crossfade로 부드럽게 전환.
 @Composable
-fun EmotionHeroImage(topEmotion: String, imageUrl: String?, modifier: Modifier = Modifier) {
-    val fallback = painterResource(drawableForEmotion(topEmotion))
-    val loadingPlaceholder = remember { ColorPainter(CardBackground) }
+fun EmotionHeroImage(imageUrl: String?, modifier: Modifier = Modifier) {
+    val emptyPainter = remember { ColorPainter(CardBackground) }
     val context = LocalContext.current
     val request = remember(imageUrl) {
         ImageRequest.Builder(context).data(imageUrl).crossfade(300).build()
@@ -92,9 +90,9 @@ fun EmotionHeroImage(topEmotion: String, imageUrl: String?, modifier: Modifier =
         model = request,
         contentDescription = null,
         contentScale = ContentScale.Crop,
-        placeholder = loadingPlaceholder,
-        error = fallback,
-        fallback = fallback,
+        placeholder = emptyPainter,
+        error = emptyPainter,
+        fallback = emptyPainter,
         modifier = modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(24.dp))
